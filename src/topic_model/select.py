@@ -35,7 +35,7 @@ createDict:
     input: stopwordlist, bill's list 
     output: word dictionary (with frequencies) 
 '''
-def createDict(filename):
+def createDict():
     # read stop word list 
     stopword_list = {}
     fin = open('./StopWordList.txt')
