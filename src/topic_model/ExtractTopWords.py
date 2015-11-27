@@ -32,7 +32,7 @@ def extract():
 def find_max(ls):
     K = len(ls)
     maxV = -100000000; maxK = -1;
-    for i in range(1, K):
+    for i in range(0, K):
         v = float(ls[i])
         if v > maxV:
             maxV = v
