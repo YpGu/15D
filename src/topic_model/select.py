@@ -32,10 +32,13 @@ def update_dict(di, li, stopwords):
 
 '''
 createDict:
-    input: stopwordlist, bill's list 
+    input: stopwordlist, bill's list, bill's [summary] 
     output: word dictionary (with frequencies) 
+    Option:
+        1 for summary
+        2 for subjects
 '''
-def createDict():
+def createDict(option):
     # read stop word list 
     stopword_list = {}
     fin = open('./StopWordList.txt')
@@ -63,23 +66,49 @@ def createDict():
     print 'Number of bills = ' + str(len(filenames))
     fileCount = 0; num_nonexist = 0
     word_dict = {}
-    for filename in filenames:
-#        print 'Processing ' + filename
-        if not os.path.isfile(filename):
-#            print 'non-exist: ' + filename
-            num_nonexist += 1
-            continue
-        tree = ET.parse(filename)
-        root = tree.getroot()
-        regex = re.compile("(?x) (?: [\w-]+  | [\x80-\xff]{3} )")
-        for f in root.findall('summary'):
-            words = divide(f.text, regex)
-            word_dict = update_dict(word_dict, words, stopword_list)
-        fileCount += 1
+    if option == 1:
+        for filename in filenames:
+    #        print 'Processing ' + filename
+            if not os.path.isfile(filename):
+    #            print 'non-exist: ' + filename
+                num_nonexist += 1
+                continue
+            tree = ET.parse(filename)
+            root = tree.getroot()
+            regex = re.compile("(?x) (?: [\w-]+  | [\x80-\xff]{3} )")
+            for f in root.findall('summary'):
+                words = divide(f.text, regex)
+                word_dict = update_dict(word_dict, words, stopword_list)
+            fileCount += 1
+    elif option == 2:
+        for filename in filenames:
+    #        print 'Processing ' + filename
+            if fileCount % 1000 == 0:
+                print fileCount
+            if not os.path.isfile(filename):
+    #            print 'non-exist: ' + filename
+                num_nonexist += 1
+                continue
+            tree = ET.parse(filename)
+            root = tree.getroot()
+            regex = re.compile("(?x) (?: [\w-]+  | [\x80-\xff]{3} )")
+            for f in root.findall('subjects'):
+                for x in f.iter('term'):
+                    subject = x.attrib['name']
+                    allSubjects[subject] = 0
+                    words = divide(subject, regex)
+                    word_dict = update_dict(word_dict, words, stopword_list)
+            fileCount += 1
+        print len(allSubjects)      # 5027 
     print 'done, non-exist = ' + str(num_nonexist)
 
     # output 
-    fout = open("./CountOfWords.txt", 'w')
+    outputDir = ''
+    if option == 1:
+        outputDir = './CountOfWords.txt'
+    elif option == 2:
+        outputDir = './CountOfWords_subject.txt'
+    fout = open(outputDir, 'w')
     for i in sorted(word_dict.items(), key=itemgetter(1), reverse=True):
         fout.write(str(i[0]) + '\t' + str(i[1]) + '\n')
     fout.close()
@@ -91,8 +120,11 @@ recordEachBill:
     output: bill_text, where each line is:
         billID  \t  wordID  \t  freq
     Note: words which occur less than 3 times will not appear in the bill_text.txt
+    Option: 
+        1: 
+        2: bill subjects
 '''
-def recordEachBill():
+def recordEachBill(option):
     # read stop word list 
     stopword_list = {}
     fin = open('./StopWordList.txt')
@@ -117,7 +149,12 @@ def recordEachBill():
     fin.close()
 
     # read all words in the dictionary
-    fin = open('./CountOfWords.txt')
+    inputDir = ''
+    if option == 1:
+        inputDir = './CountOfWords.txt'
+    elif option == 2:
+        inputDir = './CountOfWords_subject.txt'
+    fin = open(inputDir)
     lines = fin.readlines()
     wordID = 0; wordMap = {}
     for line in lines:
@@ -129,8 +166,13 @@ def recordEachBill():
 
     # parse xml file 
     print 'Number of bills = ' + str(len(filenames))
-    fout = open('./bill_term.txt', 'w')
-    billID= 0; num_nonexist = 0
+    outputDir = ''
+    if option == 1:
+        outputDir = './bill_term.txt'
+    elif option == 2:
+        outputDir = './bill_term_subject.txt'
+    fout = open(outputDir, 'w')
+    billID = 0; num_nonexist = 0
     billMap = {}
     for _filename in sorted(filenames.items(), key = lambda x: x[0], reverse = False):
         filename = _filename[0]
@@ -145,26 +187,46 @@ def recordEachBill():
         root = tree.getroot()
         regex = re.compile("(?x) (?: [\w-]+  | [\x80-\xff]{3} )")
         wordFreq = {}       # current document 
-        for f in root.findall('summary'):
-            words = divide(f.text, regex)
-            # for each word 
-            for w in words:
-                lli = re.split("-+", w.lower())
-                for ii in lli:
-                    ii = ii.strip(' \t\n\r').lower()
-                    if ii in wordMap:
-                        if ii in wordFreq:
-                            wordFreq[ii] += 1
-                        else:
-                            wordFreq[ii] = 1
-            for w in wordFreq:
-                newline = str(billID) + '\t' + str(wordMap[w]) + '\t' + str(wordFreq[w]) + '\n'
-                fout.write(newline)
+        if option == 2:
+            for f in root.findall('subjects'):
+                for x in f.iter('term'):
+                    subject = x.attrib['name']
+                    words = divide(subject, regex)
+                    # for each word 
+                    for w in words:
+                        lli = re.split("-+", w.lower())
+                        for ii in lli:
+                            ii = ii.strip(' \t\n\r').lower()
+                            if ii in wordMap:
+                                if ii in wordFreq:
+                                    wordFreq[ii] += 1
+                                else:
+                                    wordFreq[ii] = 1
+                for w in wordFreq:
+                    newline = str(billID) + '\t' + str(wordMap[w]) + '\t' + str(wordFreq[w]) + '\n'
+                    fout.write(newline)
+        elif option == 1:
+            for f in root.findall('summary'):
+                words = divide(f.text, regex)
+                # for each word 
+                for w in words:
+                    lli = re.split("-+", w.lower())
+                    for ii in lli:
+                        ii = ii.strip(' \t\n\r').lower()
+                        if ii in wordMap:
+                            if ii in wordFreq:
+                                wordFreq[ii] += 1
+                            else:
+                                wordFreq[ii] = 1
+                for w in wordFreq:
+                    newline = str(billID) + '\t' + str(wordMap[w]) + '\t' + str(wordFreq[w]) + '\n'
+                    fout.write(newline)
         billID += 1
     print 'done, non-exist = ' + str(num_nonexist)
     fout.close()
 
-    fout = open('./bill_dict.txt', 'w')
+    outputDictDir = './bill_dict.txt'
+    fout = open(outputDictDir, 'w')
     for b in billMap:
         newline = b + '\t' + str(billMap[b]) + '\n'
         fout.write(newline)
@@ -192,5 +254,5 @@ def findfiles():
 if __name__ == '__main__':
 #    findfiles()
 #    createDict()
-    recordEachBill()
+    recordEachBill(2)
 

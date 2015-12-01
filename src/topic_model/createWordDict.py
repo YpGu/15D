@@ -1,6 +1,6 @@
 def wordDict():
-    fin = open('./CountOfWords.txt')
-    fout = open('./word_dict.txt', 'w')
+    fin = open('./CountOfWords_subject.txt')
+    fout = open('./word_dict_subject.txt', 'w')
     lines = fin.readlines()
     wordID = 0; 
     for line in lines:

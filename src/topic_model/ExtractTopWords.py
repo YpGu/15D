@@ -1,8 +1,13 @@
 # extract top words from the result of topic model 
 # input: p_zw 
-def extract():
+def extract(option):
     wordMap = {}
-    fin = open('./word_dict.txt')
+    inputDir = ''
+    if option == 1:
+        inputDir = './word_dict.txt'
+    elif option == 2:
+        inputDir = './word_dict_subject.txt'
+    fin = open(inputDir)
     lines = fin.readlines()
     for line in lines:
         word, wordid = line.split('\t')
@@ -21,6 +26,7 @@ def extract():
         icount = 0
         for i in sorted(fls.items(), key = lambda x: x[1], reverse = True):
             if icount == 30:
+                fout.write('\n')
                 break
             #print i[0], wordMap[i[0]], i[1]
             newline = wordMap[i[0]] + '\t' + str(i[1]) + '\n'
@@ -124,6 +130,6 @@ def eachYear():
 
 
 if __name__ == '__main__':
-#    extract()
+#    extract(2)
     eachYear()
 
