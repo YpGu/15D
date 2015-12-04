@@ -87,12 +87,11 @@ public class FileParser {
 	public static void
 	readData(
 		String fileDir, 
-		Map<String, Integer> billMap, Map<Long, Integer> personMap,
+		int billID,
+		Map<Long, Integer> personMap,
 		List<Tuple> votingMatPos, List<Tuple> votingMatNeg
 	) {
-		long billMapSize = billMap.size();
 		String[] fs = fileDir.split("/");
-		int billID = billMap.get(fs[fs.length-1]);
 		int year = Integer.parseInt(fs[fs.length-1].split("_")[0]);	// n-th congress 
 		try (BufferedReader br = new BufferedReader(new FileReader(fileDir))) {
 			String currentLine;
@@ -125,32 +124,130 @@ public class FileParser {
 		return;
 	}
 
-	public static void
-	output(double[][] arr, String fileDir) {
-		try (PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(fileDir)))) {
-			for (int i = 0; i < arr.length; i++) {
-				writer.printf("%d\t", i);
-				for (int j = 0; j < arr[0].length; j++) {
-					writer.printf("%f\t", arr[i][j]);
+
+	public static void 
+	readTheta(String fileDir, double[][] theta) {
+		if ((new File(fileDir)).exists()) {
+			System.out.println("Reading theta from " + fileDir);
+			try (BufferedReader br = new BufferedReader(new FileReader(fileDir))) {
+				String currentLine;
+				int d = 0;	// billID
+				while ((currentLine = br.readLine()) != null) {
+					String[] tokens = currentLine.split("\t");
+					for (int k = 0; k < theta[d].length; k++) {
+						double v = Double.parseDouble(tokens[k]);
+						theta[d][k] = v;
+					}
+					d++;
 				}
-				writer.printf("\n");
+			}
+			catch (IOException e) {
+				e.printStackTrace();
+			}
+		} else {
+			System.out.println("Theta file does not exist. Initialize all theta to be 1.");
+			for (int d = 0; d < theta.length; d++) for (int k = 0; k < theta[d].length; k++) {
+				theta[d][k] = 1;
+			}
+		}
+
+		return;
+	}
+
+	public static void 
+	readPeople(String fileDir, Map<Integer, List<Integer>> candidates) {
+		System.out.println("Reading candidate list from " + fileDir);
+		try (BufferedReader br = new BufferedReader(new FileReader(fileDir))) {
+			String currentLine;
+			while ((currentLine = br.readLine()) != null) {
+				String[] tokens = currentLine.split("\t");
+				int year = Integer.parseInt(tokens[0]);
+				List<Integer> peopleList = new ArrayList<Integer>();
+				String[] ps = tokens[1].split(",");
+				for (String p: ps) {
+					int pid = Integer.parseInt(p);
+					peopleList.add(pid);
+				}
+				candidates.put(year, peopleList);
 			}
 		}
 		catch (IOException e) {
 			e.printStackTrace();
 		}
+
+		return;
+	}
+
+
+	public static void
+	output(Map<Integer, List<Integer>> candidates, double[][] arr, String fileDir, int year) {
+		if (candidates == null || candidates.size() == 0) {
+			try (PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(fileDir)))) {
+				for (int i = 0; i < arr.length; i++) {
+					writer.printf("%d\t", i);
+					for (int j = 0; j < arr[i].length; j++) {
+						writer.printf("%f\t", arr[i][j]);
+					}
+					writer.printf("\n");
+				}
+			}
+			catch (IOException e) {
+				e.printStackTrace();
+			}
+		} else {
+			// only write candidates 
+			try (PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(fileDir)))) {
+				List<Integer> people = candidates.get(year);
+				if (people == null) {
+					for (int i = 0; i < arr.length; i++) {
+						writer.printf("%d\t", i);
+						for (int j = 0; j < arr[i].length; j++) {
+							writer.printf("%f\t", arr[i][j]);
+						}
+						writer.printf("\n");
+					}
+				} else {
+					for (int i: people) {
+						writer.printf("%d\t", i);
+						for (int j = 0; j < arr[i].length; j++) {
+							writer.printf("%f\t", arr[i][j]);
+						}
+						writer.printf("\n");
+					}
+				}
+			}
+			catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+
+		return;
 	}
 
 	public static void
-	output(double[] arr, String fileDir) {
-		try (PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(fileDir)))) {
-			for (int i = 0; i < arr.length; i++) {
-				writer.printf("%d\t%f\n", i, arr[i]);
+	output(Map<Integer, List<Integer>> candidates, double[] arr, String fileDir) {
+		if (candidates == null || candidates.size() == 0) {
+			try (PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(fileDir)))) {
+				for (int i = 0; i < arr.length; i++) {
+					writer.printf("%d\t%f\n", i, arr[i]);
+				}
+			}
+			catch (IOException e) {
+				e.printStackTrace();
+			}
+		} else {
+			// only write candidates 
+			try (PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(fileDir)))) {
+				for (int i = 0; i < arr.length; i++) if (candidates.get(i) != null) {
+					writer.printf("%d\t%f\n", i, arr[i]);
+				}
+			}
+			catch (IOException e) {
+				e.printStackTrace();
 			}
 		}
-		catch (IOException e) {
-			e.printStackTrace();
-		}
+
+		return;
 	}
 
 }
